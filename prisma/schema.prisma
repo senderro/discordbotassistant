@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  discordId      String
+  walletAddress  String
+  actionsCreated Action[]  @relation("CreatedActions")
+  actionsTarget  Action[]  @relation("TargetActions")
+  transactions   Transaction[]
+  raffleEntries  RaffleEntry[]
+  donationEntries DonationEntry[]
+  splitEntries    SplitEntry[]
+  createdAt      DateTime  @default(now())
+}
+
+model Action {
+  id             String    @id @default(uuid())
+  type           ActionType
+  creator        User      @relation("CreatedActions", fields: [creatorId], references: [id])
+  creatorId      String
+  targetUser     User?     @relation("TargetActions", fields: [targetUserId], references: [id])
+  targetUserId   String?
+  token          String?
+  amount         Decimal?  @db.Decimal(18, 6)
+  status         ActionStatus @default(pending)
+  jwtToken       String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  transactions   Transaction[]
+  raffleEntries  RaffleEntry[]
+  donationEntries DonationEntry[]
+  splitEntries    SplitEntry[]
+}
+
+model Transaction {
+  id           String   @id @default(uuid())
+  action       Action   @relation(fields: [actionId], references: [id])
+  actionId     String
+  txHash       String
+  executor     User     @relation(fields: [executorId], references: [id])
+  executorId   String
+  executedAt   DateTime @default(now())
+}
+
+model RaffleEntry {
+  id         String   @id @default(uuid())
+  raffle     Action   @relation(fields: [raffleId], references: [id])
+  raffleId   String
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  walletAddress String
+  createdAt  DateTime @default(now())
+}
+
+model DonationEntry {
+  id           String   @id @default(uuid())
+  donation     Action   @relation(fields: [donationId], references: [id])
+  donationId   String
+  donor        User     @relation(fields: [donorId], references: [id])
+  donorId      String
+  amount       Decimal  @db.Decimal(18, 6)
+  txHash       String?
+  createdAt    DateTime @default(now())
+}
+
+model SplitEntry {
+  id            String   @id @default(uuid())
+  action        Action   @relation(fields: [actionId], references: [id])
+  actionId      String
+  targetUser    User     @relation(fields: [targetUserId], references: [id])
+  targetUserId  String
+  amount        Decimal  @db.Decimal(18, 6)
+  status        EntryStatus @default(pending)
+  createdAt     DateTime @default(now())
+}
+
+enum ActionType {
+  send
+  request
+  donation
+  raffle
+  split
+}
+
+enum ActionStatus {
+  pending
+  completed
+  cancelled
+  expired
+}
+
+enum EntryStatus {
+  pending
+  completed
+}

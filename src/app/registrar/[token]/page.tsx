@@ -24,12 +24,13 @@ export default function RegistrarToken() {
     try {
       const decoded = verifyJwtRegister(token);
       setPayload(decoded as JwtPayload);
-    } catch (err) {
+    } catch {
       setError("Token inválido ou expirado.");
     }
   }, [token]);
 
   const isMatching = payload && address?.toLowerCase() === payload.walletAddress.toLowerCase();
+  console.log(isMatching);
 
   return (
     <div className="p-6">

@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import {jwtDecode} from "jwt-decode";
+
+type TokenPayload = {
+  from: string;
+  to: string;
+  amount: string;
+  iat?: number;
+  exp?: number;
+};
 
 export default function Home() {
   const [from, setFrom] = useState("");
@@ -10,7 +17,7 @@ export default function Home() {
 
   const [generatedToken, setGeneratedToken] = useState("");
   const [validateInput, setValidateInput] = useState("");
-  const [validatedData, setValidatedData] = useState<any>(null);
+  const [validatedData, setValidatedData] = useState<TokenPayload | null>(null);
   const [validationError, setValidationError] = useState("");
 
   const handleGenerate = async () => {
@@ -31,22 +38,21 @@ export default function Home() {
         body: JSON.stringify({ token: validateInput }),
         headers: { "Content-Type": "application/json" },
       });
-  
+
       const result = await res.json();
-  
+
       if (!res.ok) {
         setValidationError(result.error || "Erro desconhecido");
         setValidatedData(null);
       } else {
-        setValidatedData(result.data);
+        setValidatedData(result.data as TokenPayload);
         setValidationError("");
       }
-    } catch (err) {
+    } catch {
       setValidationError("Erro ao validar o token");
       setValidatedData(null);
     }
   };
-  
 
   return (
     <main className="p-6 max-w-xl mx-auto">

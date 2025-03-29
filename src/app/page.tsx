@@ -1,29 +1,30 @@
 "use client";
 
+import ConnectWallet from "@/components/ConnectWallet";
 import { useState } from "react";
 
-type TokenPayload = {
-  from: string;
+type SendTokenPayload = {
+  creatorUser: string;
   to: string;
   amount: string;
   iat?: number;
   exp?: number;
 };
 
-export default function Home() {
-  const [from, setFrom] = useState("");
+export default function SendTokenTool() {
+  const [creatorUser, setCreatorUser] = useState("");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
 
   const [generatedToken, setGeneratedToken] = useState("");
   const [validateInput, setValidateInput] = useState("");
-  const [validatedData, setValidatedData] = useState<TokenPayload | null>(null);
+  const [validatedData, setValidatedData] = useState<SendTokenPayload | null>(null);
   const [validationError, setValidationError] = useState("");
 
   const handleGenerate = async () => {
     const res = await fetch("/api/createjwt", {
       method: "POST",
-      body: JSON.stringify({ from, to, amount }),
+      body: JSON.stringify({ creatorUser, to, amount }),
       headers: { "Content-Type": "application/json" },
     });
 
@@ -45,7 +46,7 @@ export default function Home() {
         setValidationError(result.error || "Erro desconhecido");
         setValidatedData(null);
       } else {
-        setValidatedData(result.data as TokenPayload);
+        setValidatedData(result.data as SendTokenPayload);
         setValidationError("");
       }
     } catch {
@@ -56,25 +57,30 @@ export default function Home() {
 
   return (
     <main className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">🔐 Criar JWT</h1>
+      <ConnectWallet/>
+      <h1 className="text-2xl font-bold mb-4">💸 Criar JWT para Enviar</h1>
+      
       <input
-        placeholder="from (0x...)"
-        value={from}
-        onChange={(e) => setFrom(e.target.value)}
+        placeholder="creatorUser (ex: user#1234)"
+        value={creatorUser}
+        onChange={(e) => setCreatorUser(e.target.value)}
         className="border p-2 w-full mb-2"
       />
+
       <input
-        placeholder="to (0x...)"
+        placeholder="to (Discord ID do destinatário)"
         value={to}
         onChange={(e) => setTo(e.target.value)}
         className="border p-2 w-full mb-2"
       />
+
       <input
-        placeholder="amount"
+        placeholder="amount (ex: 0.05)"
         value={amount}
         onChange={(e) => setAmount(e.target.value)}
         className="border p-2 w-full mb-2"
       />
+
       <button
         onClick={handleGenerate}
         className="bg-blue-600 text-white px-4 py-2 rounded mb-4"

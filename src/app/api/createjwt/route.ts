@@ -4,13 +4,13 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const { from, to, amount } = body;
+  const { creatorUser, to, amount } = body;
 
-  if (!from || !to || !amount) {
+  if (!creatorUser || !to || !amount) {
     return NextResponse.json({ error: "Parâmetros ausentes" }, { status: 400 });
   }
 
-  const token = createToken({ from, to, amount });
+  const token = createToken({ creatorUser, to, amount });
 
   return NextResponse.json({ token });
 }

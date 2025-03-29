@@ -14,8 +14,8 @@ datasource db {
 }
 
 model User {
-  id             String    @id @default(uuid())
-  discordId      String
+  id             String    @id @default(uuid()) @unique
+  discordId      String    @unique
   walletAddress  String
   actionsCreated Action[]  @relation("CreatedActions")
   actionsTarget  Action[]  @relation("TargetActions")
@@ -38,12 +38,16 @@ model Action {
   status         ActionStatus @default(pending)
   jwtToken       String?
   expiresAt      DateTime?
+  discordThreadId String?
+  discordChannelId String? 
   createdAt      DateTime  @default(now())
+
   transactions   Transaction[]
   raffleEntries  RaffleEntry[]
   donationEntries DonationEntry[]
   splitEntries    SplitEntry[]
 }
+
 
 model Transaction {
   id           String   @id @default(uuid())
@@ -93,6 +97,7 @@ enum ActionType {
   donation
   raffle
   split
+  register
 }
 
 enum ActionStatus {

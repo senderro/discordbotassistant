@@ -1,12 +1,19 @@
-import jwt, { JwtPayload } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
+import { isTokenExpired } from "./actions";
+import { SendTokenPayloadCheck, RegisterTokenPayloadCheck } from "./types";
 
+//CHAVE SUPER SECRETA
 const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 
+
+
+
+//TESTES REMOVER DEPOIS
 export type Payload = {
-  from: string;
+  creatorUser: string;
   to: string;
   amount: string;
-  exp?: number; // opcional porque será adicionado depois
+  exp?: number; 
 };
 
 // Criação do JWT com expiração (5 min por padrão)
@@ -19,51 +26,48 @@ export function createToken(payload: Payload, expiresInSeconds = 300): string {
   return jwt.sign(fullPayload, JWT_SECRET);
 }
 
+//TESTES REMOVER DEPOIS
+
+
+
+
+
+
+
 // Validação do JWT e tipagem segura do retorno
-export function verifyToken(token: string): Payload | null {
+
+export function verifyJwtRegister(token: string): RegisterTokenPayloadCheck | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as RegisterTokenPayloadCheck;
 
     if (
       typeof decoded === "object" &&
-      decoded.from &&
-      decoded.to &&
-      decoded.amount
+      "discordId" in decoded &&
+      "walletAddress" in decoded &&
+      !isTokenExpired(decoded.exp)
     ) {
-      return {
-        from: decoded.from as string,
-        to: decoded.to as string,
-        amount: decoded.amount as string,
-        exp: decoded.exp,
-      };
+      return decoded;
     }
 
     return null;
-  } catch (err) {
-    console.error("Token inválido:", err);
+  } catch {
     return null;
   }
 }
 
 
-export interface RegisterJwtPayload {
-  discordId: string;
-  walletAddress: string;
-  iat?: number;
-  exp?: number;
-}
-
-export function verifyJwtRegister(token: string): RegisterJwtPayload | null {
+export function verifyJwtSend(token: string): SendTokenPayloadCheck | null {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as SendTokenPayloadCheck;
 
     if (
       typeof decoded === "object" &&
-      decoded !== null &&
-      "discordId" in decoded &&
-      "walletAddress" in decoded
+      "creatorUser" in decoded &&
+      "toDiscordId" in decoded &&
+      "amount" in decoded &&
+      !isTokenExpired(decoded.exp)
     ) {
-      return decoded as RegisterJwtPayload;
+      return decoded;
     }
 
     return null;

@@ -1,46 +1,115 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import ConnectWallet from "@/components/ConnectWallet";
-import { verifyJwtRegister } from "@/lib/jwt";
 import { useEffect, useState } from "react";
-
-interface JwtPayload {
-  discordId: string;
-  walletAddress: string;
-}
+import jwt from "jsonwebtoken";
+import { RegisterTokenPayloadCheck } from "@/lib/types";
+import { useAutoSwitchNetworkHandler } from "@/lib/switchNetworkByCoin";
 
 export default function RegistrarToken() {
   const { address, isConnected } = useAccount();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
+  const params = useParams();
 
-  const [payload, setPayload] = useState<JwtPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [payload, setPayload] = useState<RegisterTokenPayloadCheck | null>(null);
+  const [jwtToken, setJwtToken] = useState<string | null>(null);
+
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
+
+  const switchIfNecessary = useAutoSwitchNetworkHandler();
 
   useEffect(() => {
-    if (!token) return;
-    try {
-      const decoded = verifyJwtRegister(token);
-      setPayload(decoded as JwtPayload);
-    } catch {
-      setError("Token inválido ou expirado.");
+    if (payload?.coinType) {
+      switchIfNecessary(payload.coinType);
     }
-  }, [token]);
+  }, [payload?.coinType]);
 
-  const isMatching = payload && address?.toLowerCase() === payload.walletAddress.toLowerCase();
-  console.log(isMatching);
+  const registrarUsuario = async () => {
+    if (!isConnected || !address || !jwtToken || !payload) return;
+  
+    setStatusMsg("Registrando...");
+  
+    const res = await fetch("/api/registrar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: jwtToken,
+        walletAddress: address,
+        threadId: payload.threadId,
+        channelId: payload.channelId,
+      }),
+    });
+  
+    const data = await res.json();
+  
+    if (!res.ok) {
+      setStatusMsg(`Erro: ${data.error || "Erro ao registrar usuário."}`);
+    } else {
+      setStatusMsg("✅ Registro realizado com sucesso!");
+    }
+  };
+
+  useEffect(() => {
+    const token = params?.token;
+
+    if (typeof token !== "string") return;
+
+    try {
+      const decoded = jwt.decode(token);
+
+      if (
+        typeof decoded === "object" &&
+        decoded !== null &&
+        "discordId" in decoded &&
+        "walletAddress" in decoded
+      ) {
+        setPayload(decoded as RegisterTokenPayloadCheck);
+        setJwtToken(token); 
+      }
+    } catch (error) {
+      console.error("Erro ao decodificar token:", error);
+    }
+  }, [params]);
 
   return (
-    <div className="p-6">
-      <h1>Registrar Carteira</h1>
+    <div className="p-6 max-w-xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-6 text-black">
+        🎟️ Registro de Usuário via Discord
+      </h1>
 
       {!isConnected ? (
-        <ConnectWallet />
-      ) : 
-        <p className="text-red-500">{error}</p>
-     }
+        <div className="mb-4">
+          <p className="mb-2 text-black">Conecte sua carteira para continuar o registro:</p>
+          <ConnectWallet />
+        </div>
+      ) : payload ? (
+        <div className="space-y-4 border p-4 rounded-lg bg-white shadow text-black">
+          <p>
+            👤 <strong>Discord ID:</strong> {payload.discordId}
+          </p>
+          <p>
+            🦊 <strong>Wallet (do Token):</strong> {payload.walletAddress}
+          </p>
+          <p>
+            🔓 <strong>Wallet (conectada):</strong> {address}
+          </p>
+
+          {/* Esse botão futuramente vai usar o jwtToken no fetch */}
+          <button
+            className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            onClick={registrarUsuario}
+          >
+            Registrar Usuário
+          </button>
+
+          {statusMsg && (
+            <p className="mt-2 text-sm text-black">{statusMsg}</p>
+          )}
+        </div>
+      ) : (
+        <p className="text-red-600">Token inválido ou ausente na URL.</p>
+      )}
     </div>
   );
 }

@@ -18,7 +18,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Usuário não encontrado ou sem carteira registrada." }, { status: 404 });
     }
 
-    return NextResponse.json({ walletAddress: user.walletAddress });
+    return NextResponse.json({ WalletAddress: user.walletAddress });
   } catch (error) {
     console.error("Erro ao buscar endereço:", error);
     return NextResponse.json({ error: "Erro interno do servidor." }, { status: 500 });

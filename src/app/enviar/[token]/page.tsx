@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import ConnectWallet from "@/components/ConnectWallet";
 import { AddressByDiscordIdReturn, SendTokenPayloadCheck } from "@/lib/types";
 import { useAutoSwitchNetworkHandler } from "@/lib/switchNetworkByCoin";
-import { verifyJwtSend } from "@/lib/jwt";
+import { jwtDecode } from "jwt-decode";
 
 
 
@@ -17,6 +17,7 @@ export default function EnviarToken() {
   const params = useParams();
   
   const [payload, setPayload] = useState<SendTokenPayloadCheck | null>(null);
+  const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   console.log(statusMsg);
 
@@ -35,17 +36,35 @@ export default function EnviarToken() {
   useEffect(() => {
     const token = params?.token;
 
-    if (typeof token !== "string") return;
+    if (typeof token !== 'string') return;
 
+    // Decodifica o token para extrair o payload
     try {
-
-      const payload = verifyJwtSend(token);
-      if (payload) {
-        setPayload(payload as SendTokenPayloadCheck);
-      }
+      const decoded = jwtDecode<SendTokenPayloadCheck>(token);
+      setPayload(decoded);
     } catch (error) {
-      console.error("Erro ao decodificar token:", error);
+      console.error('Erro ao decodificar o token:', error);
+      setPayload(null);
     }
+
+    // Verifica a validade do token chamando a API
+    const verifyToken = async () => {
+      try {
+        const response = await fetch('/api/verifyJwt', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token }),
+        });
+
+        const data = await response.json();
+        setIsTokenValid(data.valid);
+      } catch (error) {
+        console.error('Erro ao verificar o token:', error);
+        setIsTokenValid(false);
+      }
+    };
+
+    verifyToken();
   }, [params]);
 
 
@@ -104,6 +123,9 @@ export default function EnviarToken() {
 
   
   
+  if (isTokenValid === false) {
+    return <p className="text-red-600">Token inválido ou expirado.</p>;
+  }
 
   return (
     <div className="p-6 max-w-xl mx-auto">

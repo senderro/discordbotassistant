@@ -58,7 +58,7 @@ export async function POST(req: Request) {
   if (CALLBACK_URL && threadId) {
     try {
       const controller = new AbortController();
-      setTimeout(() => controller.abort(), 10000); 
+      const timeoutId = setTimeout(() => controller.abort(), 10000); 
       await fetch(`${CALLBACK_URL}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -68,6 +68,7 @@ export async function POST(req: Request) {
         }),
         signal: controller.signal,
       });
+      clearTimeout(timeoutId);
     } catch (err) {
       console.error("❌ Erro ao chamar callback do bot:", err);
     }

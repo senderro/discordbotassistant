@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos de timeout
 
-    const response = await fetch(CALLBACK_URL, {
+    const response = await fetch(`${CALLBACK_URL}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ threadId, message }),

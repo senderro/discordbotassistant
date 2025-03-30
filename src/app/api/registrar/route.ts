@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { verifyJwtRegister } from "@/lib/jwt";
+
 import { prisma } from "@/lib/prisma";
+import jwt from 'jsonwebtoken';
+import { RegisterTokenPayloadCheck } from "@/lib/types";
 
-
+const JWT_SECRET = process.env.JWT_SECRET;
 const CALLBACK_URL = process.env.BOT_API_CALLBACK;
 
 
@@ -15,8 +17,10 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
+  jwt.verify(token, JWT_SECRET!);
 
-  const payload = verifyJwtRegister(token);
+  const decoded = jwt.decode(token);
+  const payload = decoded as RegisterTokenPayloadCheck;
 
   if (!payload) {
     return NextResponse.json(

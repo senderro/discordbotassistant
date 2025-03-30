@@ -25,7 +25,6 @@ export default function EnviarToken() {
   const [toWalletAddress, setToWalletAddress] = useState<`0x${string}` | null>(null);
   const [isTokenValid, setIsTokenValid] = useState<boolean | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
-  console.log(statusMsg);
 
   const { data: hash, error, isPending, sendTransaction } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
@@ -66,15 +65,14 @@ export default function EnviarToken() {
           );
 
           if (addressRes.ok) {
-            const addressData: AddressByDiscordIdReturn =
-              await addressRes.json();
+            const addressData: AddressByDiscordIdReturn = await addressRes.json();
             setToWalletAddress(addressData.WalletAddress as `0x${string}`);
           } else {
-            console.error("❌ Erro ao buscar endereço do destinatário.");
+            console.error("❌ Failed to fetch recipient address.");
           }
         }
       } catch (err) {
-        console.error("❌ Erro ao processar token:", err);
+        console.error("❌ Error processing token:", err);
         setPayload(null);
         setIsTokenValid(false);
       }
@@ -93,15 +91,15 @@ export default function EnviarToken() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             threadId: payload.threadId,
-            message: `✅ Transação de ${payload.amount} ${payload.coinType} para ${payload.toDiscordId} concluída com sucesso.`,
+            message: `✅ Transaction of ${payload.amount} ${payload.coinType} to ${payload.toDiscordId} completed.`,
           }),
         });
 
         if (!callbackRes.ok) {
-          console.error("❌ Erro ao enviar callback para o bot.");
+          console.error("❌ Error sending callback to bot.");
         }
       } catch (err) {
-        console.error("❌ Erro de rede no callback:", err);
+        console.error("❌ Network error in callback:", err);
       }
     };
 
@@ -119,64 +117,71 @@ export default function EnviarToken() {
         value: parseEther(payload.amount),
       });
     } catch (error) {
-      console.error("Erro no envio:", error);
-      setStatusMsg("❌ Falha ao obter endereço ou enviar transação.");
+      console.error("Send error:", error);
+      setStatusMsg("❌ Failed to fetch address or send transaction.");
     }
   };
 
   if (isTokenValid === false) {
-    return <p className="text-red-600">Token inválido ou expirado.</p>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 text-red-600 text-lg font-semibold">
+        Invalid or expired token.
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6 text-black">💸 Enviar Token</h1>
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+      <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-lg text-black">
+        <h1 className="text-3xl font-bold text-center mb-6">💸 Send Token</h1>
 
-      {!isConnected ? (
-        <div className="mb-4">
-          <p className="mb-2 text-black">
-            Conecte sua carteira para continuar:
-          </p>
-          <ConnectWallet />
-        </div>
-      ) : payload ? (
-        <div className="space-y-4 border p-4 rounded-lg bg-white shadow text-black">
-          <p>
-            👤 <strong>De:</strong> {payload.creatorUser}
-          </p>
-          <p>
-            📤 <strong>Para:</strong> {payload.toDiscordId}
-          </p>
-          <p>
-            💰 <strong>Quantidade:</strong> {payload.amount}{" "}
-            {payload.coinType}
-          </p>
+        {!isConnected ? (
+          <div className="text-center">
+            <p className="mb-4 text-gray-700">Reconnect your wallet to continue:</p>
+            <ConnectWallet />
+          </div>
+        ) : payload ? (
+          <div className="space-y-4">
+            <p>
+              👤 <strong>From:</strong> {payload.creatorUser}
+            </p>
+            <p>
+              📤 <strong>To:</strong> {payload.toDiscordId}
+            </p>
+            <p>
+              💰 <strong>Amount:</strong> {payload.amount} {payload.coinType}
+            </p>
 
-          <button
-            onClick={handleSend}
-            disabled={isPending}
-            className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
-          >
-            {isPending ? "Enviando..." : "Enviar"}
-          </button>
+            <button
+              onClick={handleSend}
+              disabled={isPending}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200"
+            >
+              {isPending ? "Sending..." : "Send"}
+            </button>
 
-          {hash && (
-            <div>
-              <p>
-                🔗 <strong>Tx Hash:</strong> {hash}
-              </p>
-              {isConfirming && <p>⌛ Aguardando confirmação...</p>}
-              {isConfirmed && <p>✅ Transação confirmada!</p>}
-            </div>
-          )}
+            {hash && (
+              <div className="text-sm space-y-1">
+                <p>🔗 <strong>Tx Hash:</strong> {hash}</p>
+                {isConfirming && <p>⌛ Waiting for confirmation...</p>}
+                {isConfirmed && <p className="text-green-600">✅ Transaction confirmed!</p>}
+              </div>
+            )}
 
-          {error && (
-            <p className="text-red-600">❌ Erro: {error.message}</p>
-          )}
-        </div>
-      ) : (
-        <p className="text-red-600">Token inválido ou ausente na URL.</p>
-      )}
-    </div>
+            {error && (
+              <p className="text-red-600 text-sm">❌ Error: {error.message}</p>
+            )}
+
+            {statusMsg && (
+              <p className="text-sm font-medium">{statusMsg}</p>
+            )}
+          </div>
+        ) : (
+          <p className="text-center text-red-600 font-medium">
+            Invalid or missing token from URL.
+          </p>
+        )}
+      </div>
+    </main>
   );
 }

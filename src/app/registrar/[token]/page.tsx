@@ -74,7 +74,7 @@ export default function RegistrarToken() {
     <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-lg">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
-          🎟️ Registro via Discord
+          Register
         </h1>
 
         {!isConnected ? (
@@ -88,17 +88,17 @@ export default function RegistrarToken() {
               👤 <strong>Discord ID:</strong> {payload.discordId}
             </p>
             <p>
-              🦊 <strong>Wallet (do Token):</strong> {payload.walletAddress}
+              🦊 <strong>Wallet to Register:</strong> {payload.walletAddress}
             </p>
             <p>
-              🔓 <strong>Wallet (conectada):</strong> {address}
+              🔓 <strong>Connected Wallet:</strong> {address}
             </p>
 
             <button
               onClick={registrarUsuario}
               className="w-full bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition duration-200"
             >
-              Registrar Usuário
+              Register User
             </button>
 
             {statusMsg && (

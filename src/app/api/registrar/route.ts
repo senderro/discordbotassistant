@@ -61,8 +61,7 @@ export async function POST(req: Request) {
   // Enviar callback para o bot (caso tenha thread)
   if (CALLBACK_URL && threadId) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); 
+      
       await fetch(`${CALLBACK_URL}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -70,9 +69,7 @@ export async function POST(req: Request) {
           threadId,
           message: `✅ Wallet registered successfully for ${payload.discordId}`,
         }),
-        signal: controller.signal,
       });
-      clearTimeout(timeoutId);
     } catch (err) {
       console.error("❌ Erro ao chamar callback do bot:", err);
     }

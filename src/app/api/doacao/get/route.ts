@@ -43,6 +43,7 @@ export async function GET(req: Request) {
       donors,
       expiresAt: action.expiresAt,
       token: action.token,
+      discordThreadId: action.discordThreadId,
     });
   } catch (error) {
     console.error("❌ Error fetching donation action:", error);

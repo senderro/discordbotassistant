@@ -1,52 +1,48 @@
 import { prisma } from "@/lib/prisma";
+import { Decimal } from "@prisma/client/runtime/library";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function POST(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const actionId = searchParams.get("id");
+    const { donationId, donorAddress, amount, txHash } = await req.json();
 
-    if (!actionId) {
-      return NextResponse.json({ error: "Missing donation ID." }, { status: 400 });
+    if (!donationId || !donorAddress || !amount || !txHash) {
+      return NextResponse.json(
+        { error: "Missing required fields." },
+        { status: 400 }
+      );
     }
 
-    const action = await prisma.action.findUnique({
-      where: { id: actionId },
-      include: {
-        targetUser: true,
-        donationEntries: {
-          include: {
-            donor: true,
-          },
+    // Buscar o usuário que fez a doação pela wallet
+    const user = await prisma.user.findFirst({
+      where: {
+        walletAddress: {
+          equals: donorAddress,
+          mode: "insensitive",
         },
       },
     });
 
-    if (!action || action.type !== "donation") {
-      return NextResponse.json({ error: "Donation action not found." }, { status: 404 });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Donor not found. Make sure the wallet is registered." },
+        { status: 404 }
+      );
     }
 
-    const amountCollected = action.donationEntries.reduce((total, entry) => {
-      return total + parseFloat(entry.amount.toString());
-    }, 0);
-
-    const donors = action.donationEntries.map((entry) => ({
-      discordId: entry.donor.discordId,
-      amount: parseFloat(entry.amount.toString()),
-    }));
-
-    return NextResponse.json({
-      targetDiscordId: action.targetUser?.discordId,
-      targetWalletAddress: action.targetUser?.walletAddress,
-      amountGoal: parseFloat(action.amount?.toString() || "0"),
-      amountCollected,
-      donors,
-      expiresAt: action.expiresAt,
-      token: action.token,
-      discordThreadId: action.discordThreadId,
+    // Criar DonationEntry
+    const entry = await prisma.donationEntry.create({
+      data: {
+        donationId,
+        donorId: user.id,
+        amount: new Decimal(amount),
+        txHash,
+      },
     });
-  } catch (error) {
-    console.error("❌ Error fetching donation action:", error);
+
+    return NextResponse.json({ success: true, id: entry.id });
+  } catch (err) {
+    console.error("❌ Error creating donation entry:", err);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }

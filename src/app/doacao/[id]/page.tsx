@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useAccount, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
 import ConnectWallet from "@/components/ConnectWallet";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Donor {
   discordId: string;
@@ -19,6 +20,7 @@ interface DonationData {
   donors: Donor[];
   expiresAt: string;
   token: string;
+  discordThreadId?: string;
 }
 
 export default function PaginaDoacao() {
@@ -27,31 +29,29 @@ export default function PaginaDoacao() {
   const [donation, setDonation] = useState<DonationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [statusMsg, setStatusMsg] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const { address, isConnected } = useAccount();
   const { data: hash, error, isPending, sendTransaction } = useSendTransaction();
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-  // Fetch donation data
+  const fetchDonation = async () => {
+    try {
+      const res = await fetch(`/api/doacao/get?id=${encodeURIComponent(id as string)}`);
+      const data = await res.json();
+      setDonation(data);
+    } catch (err) {
+      console.error("❌ Failed to fetch donation data:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!id || typeof id !== "string") return;
-
-    const fetchDonation = async () => {
-      try {
-        const res = await fetch(`/api/doacao/get?id=${encodeURIComponent(id)}`);
-        const data = await res.json();
-        setDonation(data);
-      } catch (err) {
-        console.error("❌ Failed to fetch donation data:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchDonation();
   }, [id]);
 
-  // Chamar API para criar DonationEntry
   useEffect(() => {
     const addDonationEntry = async () => {
       if (!id || !isConfirmed || !address || !valor || !hash) return;
@@ -71,6 +71,9 @@ export default function PaginaDoacao() {
         const data = await res.json();
         if (res.ok) {
           setStatusMsg("✅ Donation registered successfully.");
+          setShowSuccess(true);
+          fetchDonation();
+          setTimeout(() => setShowSuccess(false), 4000);
         } else {
           console.error("❌ Failed to save donation:", data.error);
           setStatusMsg("❌ Failed to register donation.");
@@ -82,6 +85,35 @@ export default function PaginaDoacao() {
     };
 
     addDonationEntry();
+  }, [isConfirmed]);
+
+  useEffect(() => {
+    const sendBotCallback = async () => {
+      if (!isConfirmed || !donation?.discordThreadId || !donation?.targetDiscordId || !valor || !donation.amountGoal)
+        return;
+
+      const totalAfterDonation = donation.amountCollected + parseFloat(valor);
+      const remaining = Math.max(donation.amountGoal - totalAfterDonation, 0).toFixed(3);
+
+      const message = `🎉 @${donation.targetDiscordId} just received a donation of ${parseFloat(
+        valor
+      ).toFixed(3)} ${donation.token}!\nOnly ${remaining} ${donation.token} left to reach the goal!`;
+
+      try {
+        await fetch("/api/sendDiscordBotCallBack", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            threadId: donation.discordThreadId,
+            message,
+          }),
+        });
+      } catch (err) {
+        console.error("❌ Error sending Discord bot callback:", err);
+      }
+    };
+
+    sendBotCallback();
   }, [isConfirmed]);
 
   const handleDonate = async () => {
@@ -115,19 +147,30 @@ export default function PaginaDoacao() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center px-4 relative">
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-6 bg-green-100 text-green-800 px-4 py-2 rounded shadow-lg"
+          >
+            🎉 Donation successful!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-2xl text-black">
         <h1 className="text-3xl font-bold text-center mb-6">💖 Donation Campaign</h1>
 
         <div className="bg-gray-50 p-4 rounded-lg shadow-inner mb-6 space-y-2">
           <p><strong>Discord User:</strong> @{donation.targetDiscordId}</p>
           <p>
-            <strong>Progress:</strong>{" "}
-            {donation.amountCollected.toFixed(3)} / {donation.amountGoal.toFixed(3)} {donation.token}
+            <strong>Progress:</strong> {donation.amountCollected.toFixed(3)} / {donation.amountGoal.toFixed(3)} {donation.token}
           </p>
           <p>
-            <strong>Deadline:</strong>{" "}
-            {new Date(donation.expiresAt).toLocaleDateString()}
+            <strong>Deadline:</strong> {new Date(donation.expiresAt).toLocaleDateString()}
           </p>
         </div>
 

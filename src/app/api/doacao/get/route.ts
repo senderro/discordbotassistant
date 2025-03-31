@@ -26,12 +26,10 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Donation action not found." }, { status: 404 });
     }
 
-    // Soma total arrecadado
     const amountCollected = action.donationEntries.reduce((total, entry) => {
       return total + parseFloat(entry.amount.toString());
     }, 0);
 
-    // Donors formatados
     const donors = action.donationEntries.map((entry) => ({
       discordId: entry.donor.discordId,
       amount: parseFloat(entry.amount.toString()),
@@ -39,6 +37,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({
       targetDiscordId: action.targetUser?.discordId,
+      targetWalletAddress: action.targetUser?.walletAddress,
       amountGoal: parseFloat(action.amount?.toString() || "0"),
       amountCollected,
       donors,

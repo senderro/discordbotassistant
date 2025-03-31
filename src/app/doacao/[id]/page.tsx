@@ -28,7 +28,7 @@ export default function PaginaDoacao() {
 
     const fetchDonation = async () => {
       try {
-        const res = await fetch(`/api/doacao?id=${encodeURIComponent(id)}`);
+        const res = await fetch(`/api/doacao/get?id=${encodeURIComponent(id)}`);
         const data = await res.json();
         setDonation(data);
       } catch (err) {
